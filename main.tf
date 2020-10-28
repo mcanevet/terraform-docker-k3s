@@ -127,7 +127,7 @@ resource "docker_container" "k3s_server" {
 
   mounts {
     target = "/output"
-    source = abspath(path.cwd)
+    source = abspath(path.module)
     type   = "bind"
   }
 
@@ -165,7 +165,7 @@ resource "docker_container" "k3s_server" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "rm ${path.cwd}/kubeconfig.yaml"
+    command = "rm ${path.module}/kubeconfig.yaml"
   }
 }
 
@@ -180,7 +180,7 @@ resource "null_resource" "provisioner" {
     command = "kubectl -n argocd delete application --all; kubectl -n cluster-operators delete deployments --all; for kind in daemonsets statefulsets deployments cronjobs jobs horizontalpodautoscaler service; do kubectl delete $kind --all --all-namespaces; done; for i in `seq 1 60`; do test `kubectl get pods --all-namespaces | wc -l` -eq 0 && exit 0 || true; sleep 5; done; echo TIMEOUT && exit 1"
 
     environment = {
-      KUBECONFIG = "${path.cwd}/kubeconfig.yaml"
+      KUBECONFIG = "${path.module}/kubeconfig.yaml"
     }
   }
 }
@@ -259,12 +259,12 @@ resource "null_resource" "fix_kubeconfig" {
   ]
 
   provisioner "local-exec" {
-    command = "sed -i -e 's/127.0.0.1/${docker_container.k3s_server.ip_address}/' ${path.cwd}/kubeconfig.yaml"
+    command = "sed -i -e 's/127.0.0.1/${docker_container.k3s_server.ip_address}/' ${path.module}/kubeconfig.yaml"
   }
 }
 
 data "local_file" "kubeconfig" {
-  filename = "${path.cwd}/kubeconfig.yaml"
+  filename = "${path.module}/kubeconfig.yaml"
 
   depends_on = [
     null_resource.fix_kubeconfig,
